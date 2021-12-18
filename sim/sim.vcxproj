@@ -119,13 +119,18 @@
     <ClCompile Include="bus.c" />
     <ClCompile Include="cache.c" />
     <ClCompile Include="core.c" />
-    <ClCompile Include="pipeline_functions.c" />
+    <ClCompile Include="files_handler.c" />
+    <ClCompile Include="memory.c" />
+    <ClCompile Include="pipeline.c" />
+    <ClCompile Include="sim.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bridge.h" />
     <ClInclude Include="bus.h" />
     <ClInclude Include="cache.h" />
     <ClInclude Include="core.h" />
+    <ClInclude Include="files_handler.h" />
+    <ClInclude Include="memory.h" />
     <ClInclude Include="pipeline.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

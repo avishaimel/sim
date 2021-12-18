@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 
 #define READ "PrRd"
 #define WRITE "PrWr"
@@ -8,7 +9,10 @@
 #define RIGHT_MOST_12 0xfff00
 
 typedef enum mesi_state {
-	I, S, E, M
+	INVALID,
+	SHARED,
+	EXCLUSIVE,
+	MODIFIED
 }mesi_state;
 
 typedef struct Tsram {
@@ -34,3 +38,6 @@ int translate_tag(int address);
 int translate_index(int address);
 char* translate_mesi_transaction(int opcode);
 int get_mesi_state(Cache* cache, int index, int tag, bool* tagConflict);
+int mesi_state_machine(char* type_transaction, int mesi_current_state);
+Cache* cache_initiation(int coreID);
+void free_cache(Cache* cache);

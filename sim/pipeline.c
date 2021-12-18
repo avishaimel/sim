@@ -12,6 +12,11 @@ int sign_extention(int immediate) {
 	return immediate;
 }
 
+bool isBranchOpcode(int opcode)
+{
+	return opcode >= 9 && opcode <= 15;
+}
+
 
 void branchResolution(Core *core) {
 	bool isJump = false;
@@ -137,7 +142,32 @@ int runALU(int opcode, int A, int B) {
 }
 
 
+
 //Public functions:
+
+void handle_load_store(Core* core, int cycleNumber, StallData* stallData)
+{
+	int result_LL;
+	bool isStall = false;
+	core->new_state_Reg->mem_wb->LMD = request(core->Cache,
+		core->current_state_Reg->ex_mem->IR->opcode,
+		core->current_state_Reg->ex_mem->ALUOutput, core->current_state_Reg->privateRegisters[core->current_state_Reg->ex_mem->IR->rd],
+		core->coreID, cycleNumber,
+		&isStall, &result_LL);
+	if (core->current_state_Reg->ex_mem->IR->opcode == 19) //sc
+	{
+		core->new_state_Reg->mem_wb->ALUOutput = result_LL;
+	}
+	if (isStall) {
+		stallData[MEMORY].active = true;
+		core->new_state_Reg->mem_wb->isStall = true;
+	}
+	else {
+		stallData[MEMORY].active = false;
+		core->new_state_Reg->mem_wb->isStall = false;
+	}
+}
+
 
 
 void Fetch(CoreRegisters* current_Reg, Core* current_core, StallData* stall) {
@@ -279,5 +309,43 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 
 	if (current_core->current_state_Reg->ex_mem->IR->opcode >= 16 && current_core->current_state_Reg->ex_mem->IR->opcode <= 19) { // lw, sw, ll, sc
 		handle_load_store(current_core, cycleNumber, stallData);
+	}
+}
+
+
+void WriteBack(CoreRegisters* currentRegisters, Core* core, StallData* stallData, int cycleNumber) {
+	if (currentRegisters->mem_wb->isStall) { // stall
+		core->state.writeBackExecuted = false;
+		return;
+	}
+	if (!core->state.doWriteBack) // before first WB
+		return;
+	if (currentRegisters->mem_wb->IR->opcode == 20) { // reached halt- stop program WB ended
+		core->state.haltProgram = true;
+		core->coreStatistics.cycles = cycleNumber + 1;// actual number of clock cycles the core was running till halt
+		core->state.writeBackExecuted = true;
+		core->state.doWriteBack = false;
+		return;
+	}
+	core->state.writeBackExecuted = true;
+	if (core->new_state_Reg->mem_wb->IR->opcode == 16) {
+		core->new_state_Reg->privateRegisters[currentRegisters->mem_wb->IR->rd] = currentRegisters->mem_wb->LMD;
+		return;
+	}
+	else if (core->new_state_Reg->mem_wb->IR->opcode == 17 || (core->new_state_Reg->mem_wb->IR->opcode >= 9 && core->new_state_Reg->mem_wb->IR->opcode <= 15)) {
+		return;
+	}
+	if (currentRegisters->mem_wb->IR->rd != 0 && currentRegisters->mem_wb->IR->rd != 1)/*for not changing the ZERO and IMM registers*/
+		core->new_state_Reg->privateRegisters[currentRegisters->mem_wb->IR->rd] = currentRegisters->mem_wb->ALUOutput;
+}
+
+void moveDtoQ(Core* core) {
+	memcpy(core->current_state_Reg->if_id, core->new_state_Reg->if_id, sizeof(IF_ID));
+	memcpy(core->current_state_Reg->id_ex, core->new_state_Reg->id_ex, sizeof(ID_EX));
+	memcpy(core->current_state_Reg->ex_mem, core->new_state_Reg->ex_mem, sizeof(EX_MEM));
+	memcpy(core->current_state_Reg->mem_wb, core->new_state_Reg->mem_wb, sizeof(MEM_WB));
+
+	for (int i = 0; i < NUM_OF_REGISTERS; i++) {
+		core->current_state_Reg->privateRegisters[i] = core->new_state_Reg->privateRegisters[i];
 	}
 }

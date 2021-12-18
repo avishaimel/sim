@@ -1,6 +1,10 @@
 #pragma once
+#ifndef CORE_H
+#define CORE_H
+
 #include "cache.h"
-#include "pipeline.h"
+#include <stdbool.h>
+#include <stdio.h>
 
 #define LINE_LENGTH 9
 #define NUMBER_OF_INSTRUCTIONS 1024
@@ -8,6 +12,7 @@
 #define NUM_OF_REGISTERS 16
 #define PIPLINE_LENGTH 5
 #define CORE_NUM 4
+#define INSTRUCTIONS_SIZE 1024
 
 typedef enum opcodes {
 	ADD, SUB, AND,
@@ -26,8 +31,43 @@ typedef struct imemin_command {
 	unsigned int rs; // 4 bits
 	unsigned int rt; // 4 bits
 	int imm; // 12 bits
-	void(*Inst_Func)(unsigned int rd, unsigned int rs, unsigned int rt);	//Pointer to execution function
 }Instruction;
+
+
+
+/* pipeline variable if\id */
+typedef struct IF_ID {
+	int PC;
+	int New_PC; /*the new PC */
+	Instruction* IR;/*instruction which contains the opcode to check for branch*/
+	int delaySlotPC;
+}IF_ID;
+
+
+/*pipeline variable id\ex */
+typedef struct ID_EX {
+	int PC;
+	int A;
+	int B;
+	Instruction* IR;
+} ID_EX;
+
+/* pipeline variable ex\mem */
+typedef struct EX_MEM {
+	int PC;
+	Instruction* IR;
+	int ALUOutput;/*the output to be written back to the registers */
+	bool isStall;/*check for stall in the pipeline */
+} EX_MEM;
+
+/* pipeline variable mem\wb */
+typedef struct MEM_WB {
+	int PC;
+	Instruction* IR;
+	int ALUOutput;/*the output to be written back to the registers */
+	int LMD;/*the data to be written back to the registers array*/
+	bool isStall;/*check for stall in the pipeline */
+} MEM_WB;
 
 /*Holds the registers values - private and pipeline registers*/
 typedef struct CoreRegisters {
@@ -37,7 +77,6 @@ typedef struct CoreRegisters {
 	EX_MEM* ex_mem;
 	MEM_WB* mem_wb;
 } CoreRegisters;
-
 
 //Core structure:
 typedef struct CoreState {
@@ -59,6 +98,12 @@ typedef struct Statistics {
 	int decode_stall;/*number of cycles a pipeline stall was inserted in decode stage*/
 }Statistics;
 
+/*struct for holding information about the stall in each core */
+typedef struct StallData {
+	int cyclesToStall; /*number of cycles we want to stall in the pipeline */
+	bool active; /*is stall exists */
+} StallData;
+
 /*Core structure: */
 typedef struct Core {
 	int coreID; /*identifier of the cores - 0 to 3 */
@@ -70,3 +115,12 @@ typedef struct Core {
 	Statistics coreStatistics; /*the statistics of the core */
 	StallData stallData[PIPLINE_LENGTH]; /*data about the stalls in the core pipeine */
 } Core;
+
+
+// Functions:
+
+Core* cores_initiation(Cache** cache_array);
+void free_Cores(Core* cores);
+void write_Core_Trace(FILE* trace, Core* core, int cycleNumber);
+
+#endif
