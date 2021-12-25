@@ -6,6 +6,7 @@
 
 #include "core.h"
 #include "cache.h"
+#include "bridge.h" 
 #pragma warning(disable:4996)
 
 //Private Functions:
@@ -88,21 +89,27 @@ int get_mesi_state(Cache* cache, int index, int tag, bool* tagConflict) {
 	return INVALID;
 }
 
-int mesi_state_machine(char* type_transaction, int msi_current_state) {
+int mesi_state_machine(char* type_transaction, int mesi_current_state) {
 	int next_state = INVALID;
-	switch (msi_current_state) {
+	switch (mesi_current_state) {
 	case INVALID:
 		if (!strcmp(type_transaction, READ)) {
-			next_state = SHARED;
+			if (main_bridge->main_bus->bus_shared == 1)
+				next_state = SHARED;
+			else {
+				next_state = EXCLUSIVE;
+				main_bridge->main_bus->bus_shared = 0;
+			}
 		}
 		else if (!strcmp(type_transaction, WRITE)) {
 			next_state = MODIFIED;
 		}
 		else {
-			printf("Error_Cache_2: Msi transaction given not legal");
+			printf("Error_Cache_2: Mesi transaction given not legal");
 			exit(1);
 		}
 		break;
+
 	case SHARED:
 		if (!strcmp(type_transaction, READ)) {
 			next_state = SHARED;
@@ -111,10 +118,24 @@ int mesi_state_machine(char* type_transaction, int msi_current_state) {
 			next_state = MODIFIED;
 		}
 		else {
-			printf("Error_Cache_2: Msi transaction given not legal");
+			printf("Error_Cache_2: Mesi transaction given not legal");
 			exit(1);
 		}
 		break;
+
+	case EXCLUSIVE:
+		if (!strcmp(type_transaction, READ)) {
+			next_state = EXCLUSIVE;
+		}
+		else if (!strcmp(type_transaction, WRITE)) {
+			next_state = MODIFIED;
+		}
+		else {
+			printf("Error_Cache_2: Mesi transaction given not legal");
+			exit(1);
+		}
+		break;
+
 	case MODIFIED:
 		if (!strcmp(type_transaction, READ)) {
 			next_state = MODIFIED;
@@ -123,7 +144,7 @@ int mesi_state_machine(char* type_transaction, int msi_current_state) {
 			next_state = MODIFIED;
 		}
 		else {
-			printf("Error_Cache_2: Msi transaction given not legal");
+			printf("Error_Cache_2: Mesi transaction given not legal");
 			exit(1);
 		}
 		break;

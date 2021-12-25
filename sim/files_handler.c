@@ -101,7 +101,7 @@ void write_RegOut(Core *cores, FILE **regout) {
 }
 
 void write_Rams(FILE* tram, FILE* dram, struct cache* cache) {
-	for (int j = 0; j < 256; j++) {
+	for (int j = 0; j < NUM_OF_BLOCK; j++) {
 		fprintf(dram, "%08X\n", cache->dsram[j]);
 		fprintf(tram, "%05X", cache->tsram[j]->mesi_state);
 		fprintf(tram, "%03X\n", cache->tsram[j]->tag);

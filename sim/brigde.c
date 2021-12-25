@@ -120,7 +120,14 @@ int connection_between_bus_and_cache(Cache_inst current_request, int coreID, int
 			result = modified_data;
 			update_status_bus(main_bridge->main_bus, FLUSH, address, modifiedID, modified_data, cycle - 3, main_bridge->bus_trace, true);
 			update_memory(main_bridge->main_bus, address, modified_data);
-			update_status_memory(main_bridge->main_bus, address, modifiedID, SHARED, instruction,  false);
+			if (main_bridge->main_bus->bus_shared) {
+				update_status_memory(main_bridge->main_bus, address, modifiedID, SHARED, instruction, false);
+			}
+			else
+			{
+				update_status_memory(main_bridge->main_bus, address, modifiedID, EXCLUSIVE, instruction, false);
+
+			}
 			update_status_cache(modifiedID, index, SHARED);
 		}
 		else {
@@ -132,13 +139,19 @@ int connection_between_bus_and_cache(Cache_inst current_request, int coreID, int
 				update_status_memory(main_bridge->main_bus, address, coreID, INVALID, instruction,  false);
 				update_status_cache(coreID, index, INVALID);
 			}
-			*stall_counter += 65; //2 cycles for bus and 64 to get from memory
-			update_status_bus(main_bridge->main_bus, FLUSH, address, MEMORY_4, main_bridge->main_bus->main_memory[address], cycle - 2, main_bridge->bus_trace, true);
+			*stall_counter += 17; //2 cycles for bus and 16 to get from memory
+			update_status_bus(main_bridge->main_bus, FLUSH, address, MAIN_MEMORY, main_bridge->main_bus->main_memory[address], cycle - 2, main_bridge->bus_trace, true);
 		}
-		update_status_memory(main_bridge->main_bus, address, coreID, SHARED, instruction,  true);
-		result = main_bridge->main_bus->bus_data;
+		if (main_bridge->main_bus->bus_shared) {
+			update_status_memory(main_bridge->main_bus, address, coreID, SHARED, instruction, false);
+		}
+		else
+		{
+			update_status_memory(main_bridge->main_bus, address, coreID, EXCLUSIVE, instruction, false);
+
+		}		result = main_bridge->main_bus->bus_data;
 	}
-	else if ((!strcmp(transaction, READ) && state_cache == SHARED) || (!strcmp(transaction, READ) && state_cache == MODIFIED)) {
+	else if ((!strcmp(transaction, READ) && ((state_cache == SHARED) || (state_cache == MODIFIED) || (state_cache == EXCLUSIVE)))) {
 		int bus_data = main_bridge->cache_array[coreID]->dsram[current_request.index];
 		update_status_bus(main_bridge->main_bus, BUSRD, address, coreID, bus_data, cycle, main_bridge->bus_trace, false);
 		update_status_memory(main_bridge->main_bus, address, coreID, state_cache, instruction,  true);
@@ -147,6 +160,11 @@ int connection_between_bus_and_cache(Cache_inst current_request, int coreID, int
 	else if (!strcmp(transaction, WRITE) && state_cache == MODIFIED) {
 		update_status_bus(main_bridge->main_bus, BUSRDX, address, coreID, 0, cycle, main_bridge->bus_trace, false);
 		update_status_memory(main_bridge->main_bus, address, coreID, state_cache, instruction,  true);
+		result = main_bridge->main_bus->bus_data;
+	}
+	else if (!strcmp(transaction, WRITE) && state_cache == EXCLUSIVE) {
+		update_status_bus(main_bridge->main_bus, BUSRDX, address, coreID, 0, cycle, main_bridge->bus_trace, false);
+		update_status_memory(main_bridge->main_bus, address, coreID, MODIFIED, instruction, true);
 		result = main_bridge->main_bus->bus_data;
 	}
 	else if (!strcmp(transaction, WRITE) && state_cache == INVALID) {
@@ -166,9 +184,6 @@ int connection_between_bus_and_cache(Cache_inst current_request, int coreID, int
 				int previousTag = main_bridge->cache_array[coreID]->tsram[current_request.index]->tag;
 				int dataToFlush = main_bridge->cache_array[coreID]->dsram[current_request.index];
 				int addressToFlush = get_address(previousTag, current_request.index);
-				if (dataToFlush == 7) {
-					int h = 0;
-				}
 				update_memory(main_bridge->main_bus, addressToFlush, dataToFlush);
 				update_status_memory(main_bridge->main_bus, address, coreID, INVALID, instruction,  false);
 				update_status_cache(coreID, index, INVALID);
@@ -178,8 +193,8 @@ int connection_between_bus_and_cache(Cache_inst current_request, int coreID, int
 				update_status_cache(i, index, INVALID);
 			}
 
-			*stall_counter += 65; //2 cycles for bus and 64 to get from memory
-			update_status_bus(main_bridge->main_bus, FLUSH, address, MEMORY_4, main_bridge->main_bus->main_memory[address], cycle - 2, main_bridge->bus_trace, true);
+			*stall_counter += 17; //2 cycles for bus and 16 to get from memory
+			update_status_bus(main_bridge->main_bus, FLUSH, address, MAIN_MEMORY, main_bridge->main_bus->main_memory[address], cycle - 2, main_bridge->bus_trace, true);
 		}
 		update_status_memory(main_bridge->main_bus, address, coreID, MODIFIED, instruction,  true);
 		result = main_bridge->main_bus->bus_data;
@@ -191,8 +206,8 @@ int connection_between_bus_and_cache(Cache_inst current_request, int coreID, int
 			update_status_cache(i, index, INVALID);
 		}
 
-		*stall_counter += 65; //2 cycles for bus and 64 to get from memory
-		update_status_bus(main_bridge->main_bus, FLUSH, address, MEMORY_4, main_bridge->main_bus->main_memory[address], cycle - 2, main_bridge->bus_trace, true);
+		*stall_counter += 17; //2 cycles for bus and 16 to get from memory
+		update_status_bus(main_bridge->main_bus, FLUSH, address, MAIN_MEMORY, main_bridge->main_bus->main_memory[address], cycle - 2, main_bridge->bus_trace, true);
 		update_status_memory(main_bridge->main_bus, address, coreID, MODIFIED, instruction,  true);
 		result = main_bridge->main_bus->bus_data;
 	}
@@ -217,7 +232,7 @@ int cycles_to_wait(Cache_inst current_request, int coreID) {
 			result = 3;
 		}
 		else {
-			result = 66; //2 cycles for bus and 64 to get from memory
+			result = 18; //1 cycles for bus and 16 to get from memory
 		}
 	}
 	else if (!strcmp(transaction, WRITE) && state_cache == INVALID) {
@@ -225,11 +240,11 @@ int cycles_to_wait(Cache_inst current_request, int coreID) {
 			result = 3;
 		}
 		else {
-			result = 66; //2 cycles for bus and 64 to get from memory
+			result = 18; //1 cycles for bus and 16 to get from memory
 		}
 	}
 	else if (!strcmp(transaction, WRITE) && state_cache == SHARED) {
-		result = 66; //2 cycles for bus and 64 to get from memory
+		result = 18; //1 cycles for bus and 16 to get from memory
 	}
 
 	return result;
@@ -244,18 +259,7 @@ int handle_request(struct cache* cache, Cache_inst current_request, int coreID, 
 	cycle++;
 	if (!strcmp(operation, READ)) {
 		switch (current_state) {
-		case SHARED:
-			data_to_return = cache->dsram[current_request.index];
-			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
-			new_state = mesi_state_machine(operation, current_state);
-			update_tsram(cache, current_request, new_state);
-			break;
-		case MODIFIED:
-			data_to_return = cache->dsram[current_request.index];
-			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
-			new_state = mesi_state_machine(operation, current_state);
-			cache->tsram[current_request.index]->mesi_state = new_state;
-			break;
+
 		case INVALID:
 			*stall_counter = *stall_counter + 1;
 			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
@@ -264,10 +268,33 @@ int handle_request(struct cache* cache, Cache_inst current_request, int coreID, 
 			new_state = mesi_state_machine(operation, current_state);
 			update_tsram(cache, current_request, new_state);
 			break;
+
+		case SHARED:
+			data_to_return = cache->dsram[current_request.index];
+			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
+			new_state = mesi_state_machine(operation, current_state);
+			update_tsram(cache, current_request, new_state);
+			break;
+
+		case EXCLUSIVE:
+			data_to_return = cache->dsram[current_request.index];
+			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
+			new_state = mesi_state_machine(operation, current_state);
+			update_tsram(cache, current_request, new_state);
+			break;
+		
+		case MODIFIED:
+			data_to_return = cache->dsram[current_request.index];
+			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
+			new_state = mesi_state_machine(operation, current_state);
+			cache->tsram[current_request.index]->mesi_state = new_state;
+			break;
+		
 		}
 	}
 	else if (!strcmp(operation, WRITE)) {
 		switch (current_state) {
+
 		case INVALID:
 			*stall_counter = *stall_counter + 1;
 			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
@@ -276,6 +303,7 @@ int handle_request(struct cache* cache, Cache_inst current_request, int coreID, 
 			new_state = mesi_state_machine(operation, current_state);
 			update_tsram(cache, current_request, new_state);
 			break;
+
 		case SHARED:
 			*stall_counter = *stall_counter + 1;
 			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
@@ -284,6 +312,16 @@ int handle_request(struct cache* cache, Cache_inst current_request, int coreID, 
 			new_state = mesi_state_machine(operation, current_state);
 			update_tsram(cache, current_request, new_state);
 			break;
+
+		case EXCLUSIVE:
+			*stall_counter = *stall_counter + 1;
+			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
+			cache->dsram[current_request.index] = current_request.rd;
+			data_to_return = cache->dsram[current_request.index];
+			new_state = mesi_state_machine(operation, current_state);
+			update_tsram(cache, current_request, new_state);
+			break;
+
 		case MODIFIED:
 			data_from_pipe = connection_between_bus_and_cache(current_request, coreID, cycle, stall_counter, tagConflict);
 			cache->dsram[current_request.index] = current_request.rd;
@@ -301,7 +339,6 @@ int handle_request(struct cache* cache, Cache_inst current_request, int coreID, 
 	return data_to_return;
 }
 
-// First we need to write all bus and cache functions
 int request(Cache* cache, int opcode, int address, int rd_value, int coreID, int cycle, bool* isStall) {
 	int result = 0;
 	int stall_counter = 0;

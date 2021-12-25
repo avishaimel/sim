@@ -28,6 +28,6 @@ void Decode(CoreRegisters* currentRegisters, Core* current_core, StallData* stal
 void EX(CoreRegisters* current_Reg, Core* current_core, StallData* stallData);
 void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, int cycleNumber);
 void WriteBack(CoreRegisters* currentRegisters, Core* core, StallData* stallData, int cycleNumber);
-void moveDtoQ(Core* core);
+void update_core_registers(Core* core);
 
 #endif

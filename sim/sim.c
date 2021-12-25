@@ -140,7 +140,7 @@ void cyclesSimulation(Core* cores_array, int numOfCycle, FILE** trace)
 			Decode(cores_array[i].current_state_Reg, &(cores_array[i]), cores_array[i].stallData);
 			Fetch(cores_array[i].current_state_Reg, &(cores_array[i]), cores_array[i].stallData);
 			write_Core_Trace(trace[i], &(cores_array[i]), numOfCycle);
-			moveDtoQ(&(cores_array[i]));
+			update_core_registers(&(cores_array[i]));
 			cores_array[i].state.PC = cores_array[i].current_state_Reg->if_id->New_PC;
 		}
 	}

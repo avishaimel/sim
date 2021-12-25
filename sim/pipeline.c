@@ -258,13 +258,12 @@ void EX(CoreRegisters* current_Reg, Core* current_core, StallData* stallData) {
 	}
 	current_core->state.doMemory = true;
 	current_core->state.executeExecuted = true;
-	if ((current_Reg->id_ex->IR->opcode >= 0 && current_Reg->id_ex->IR->opcode <= 8) || (current_Reg->id_ex->IR->opcode >= 16 && current_Reg->id_ex->IR->opcode <= 19)) { /*arithmetic instructions*/
+	if ((current_Reg->id_ex->IR->opcode >= 0 && current_Reg->id_ex->IR->opcode <= 8) || (current_Reg->id_ex->IR->opcode >= 16 && current_Reg->id_ex->IR->opcode <= 17)) { /*arithmetic instructions*/
 		current_core->new_state_Reg->ex_mem->ALUOutput = runALU(current_Reg->id_ex->IR->opcode,
-			current_Reg->id_ex->A, current_Reg->id_ex->B);
+																	current_Reg->id_ex->A, current_Reg->id_ex->B);
 	}
 }
 
-// MANY DEPENDENCIES - first we have to finish with cache and bus
 void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, int cycleNumber) {
 	bool isStall = false;
 	if (!current_core->state.doMemory) {
@@ -339,7 +338,7 @@ void WriteBack(CoreRegisters* currentRegisters, Core* core, StallData* stallData
 		core->new_state_Reg->privateRegisters[currentRegisters->mem_wb->IR->rd] = currentRegisters->mem_wb->ALUOutput;
 }
 
-void moveDtoQ(Core* core) {
+void update_core_registers(Core* core) {
 	memcpy(core->current_state_Reg->if_id, core->new_state_Reg->if_id, sizeof(IF_ID));
 	memcpy(core->current_state_Reg->id_ex, core->new_state_Reg->id_ex, sizeof(ID_EX));
 	memcpy(core->current_state_Reg->ex_mem, core->new_state_Reg->ex_mem, sizeof(EX_MEM));

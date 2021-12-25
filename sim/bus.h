@@ -28,16 +28,17 @@ typedef enum bus_device {
 	CORE_1,
 	CORE_2,
 	CORE_3,
-	MEMORY_4
+	MAIN_MEMORY
 }bus_device;
 
 typedef struct bus {
 	int* main_memory;
-	int*** memory_state;  //[0] is for msi operation, [1] is for storing type of opcoding in case of LL or SC
+	int** memory_state;  
 	int bus_origid;
 	int bus_cmd;
 	int bus_addr;
 	int bus_data;
+	int bus_shared;
 }bus;
 
 

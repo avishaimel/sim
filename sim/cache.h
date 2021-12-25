@@ -3,7 +3,7 @@
 
 #define READ "PrRd"
 #define WRITE "PrWr"
-#define NUM_OF_BLOCK 256
+#define NUM_OF_BLOCK 64
 #define LEFT_MOST_20 0xfffff
 #define LEFT_MOST_8 0xff
 #define RIGHT_MOST_12 0xfff00
