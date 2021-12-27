@@ -343,7 +343,7 @@ int request(Cache* cache, int opcode, int address, int rd_value, int coreID, int
 	int result = 0;
 	int stall_counter = 0;
 	bool tagConflict = false;
-	if ((opcode != LW) && !(opcode == SW)) {
+	if ((opcode != LW) && (opcode != SW)) {
 		printf("Error_Bridge _3 : Trying to access cache with invalid instruction");
 		return 1;
 	}
@@ -354,7 +354,7 @@ int request(Cache* cache, int opcode, int address, int rd_value, int coreID, int
 	current_request.tag = translate_tag(current_request.address);
 	current_request.index = translate_index(current_request.address);
 	current_request.mesi_transaction = translate_mesi_transaction(opcode);
-	current_request.mesi_state = get_mesi_state(cache, current_request.index, current_request.tag, &tagConflict);
+	current_request.mesi_state = get_mesi_state_old(cache, current_request.index, current_request.tag, &tagConflict);
 
 
 	int stall = cycles_to_wait(current_request, coreID);

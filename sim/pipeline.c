@@ -86,7 +86,7 @@ bool check_if_Data_Hazard(Instruction *Inst_to_check, Instruction *Rd_inst) {
 	if (Rd_inst->rd == 0 || Rd_inst->rd == 1 ||
 		(Rd_inst->opcode >= 9 && Rd_inst->opcode <= 15) || Rd_inst->opcode == 17) // branch instructions or sw -> Rd doesn't change - no hazard
 		return false;
-	if (Inst_to_check->opcode != 15 || (Inst_to_check->opcode != 20)) // not halt/jal instruction data- optional hazard in rs/rt
+	if (Inst_to_check->opcode != 15 && (Inst_to_check->opcode != 20)) // not halt/jal instruction data- optional hazard in rs/rt
 		if (Inst_to_check->rs == Rd_inst->rd || Inst_to_check->rt == Rd_inst->rd)
 			return true;
 	if ((Inst_to_check->opcode >= 9 && Inst_to_check->opcode <= 15) || Inst_to_check->opcode == 17) /*
@@ -143,7 +143,22 @@ int runALU(int opcode, int A, int B) {
 
 
 
-//Public functions:
+// Public functions:
+void mem_access(Core* core, int cycleNumber, StallData* stall_data) {
+	// return if opcode is not lw/sw
+	int opcode = core->current_state_Reg->ex_mem->IR->opcode;
+	if (opcode != 16 && opcode != 17) {
+		return;
+	}
+	bool tag_conflict = false;
+	if (opcode == 16) {
+		int mesi_state = get_mesi_state(core->Cache, core->current_state_Reg->ex_mem->ALUOutput, &tag_conflict);
+		if (mesi_state == INVALID || tag_conflict) {
+			core->Cache->read_miss++;
+			
+		}
+	}
+}
 
 void handle_load_store(Core* core, int cycleNumber, StallData* stallData)
 {
@@ -249,7 +264,6 @@ void EX(CoreRegisters* current_Reg, Core* current_core, StallData* stallData) {
 	if (current_Reg->id_ex->IR->opcode == 20) { // reached halt
 		current_core->state.doMemory = true;
 		current_core->state.executeExecuted = true;
-		current_core->state.executeExecuted = true;
 		current_core->state.doExecute = false;
 		return;
 	}
@@ -294,7 +308,6 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 	if (current_Reg->ex_mem->IR->opcode == 20) { // reached halt
 		current_core->state.doWriteBack = true;
 		current_core->state.memoryExecuted = true;
-		current_core->state.memoryExecuted = true;
 		current_core->state.doMemory = false;
 		return;
 	}
@@ -306,7 +319,7 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 	current_core->state.memoryExecuted = true;
 	current_core->new_state_Reg->mem_wb->ALUOutput = current_Reg->ex_mem->ALUOutput;
 
-	if (current_core->current_state_Reg->ex_mem->IR->opcode >= 16 && current_core->current_state_Reg->ex_mem->IR->opcode <= 19) { // lw, sw, ll, sc
+	if (current_core->current_state_Reg->ex_mem->IR->opcode >= 16 && current_core->current_state_Reg->ex_mem->IR->opcode <= 17) { // lw, sw
 		handle_load_store(current_core, cycleNumber, stallData);
 	}
 }

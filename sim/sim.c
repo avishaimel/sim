@@ -119,7 +119,7 @@ void Load_inst_into_Core(char commands[10], FILE* imem, Core* current_core)
  */
 bool stopProgram(Core *cores) {
 	bool result = true;
-	for (int i = 0; i < CORE_NUM; i++) {
+	for (int i = 0; i < CORE_NUM && result; i++) {
 		result = result && (cores[i].state.haltProgram);
 	}
 	return result;
