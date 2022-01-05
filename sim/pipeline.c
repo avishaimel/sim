@@ -289,7 +289,7 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 	if (stallData[MEMORY].active) {  // stall in memory 
 		current_core->new_state_Reg->mem_wb->isStall = true;
 		current_core->state.memoryExecuted = true;
-		mem_access(current_core, cycleNumber, stallData);
+		mem_access(current_core, stallData);
 		return;
 	}
 
@@ -316,7 +316,7 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 	current_core->new_state_Reg->mem_wb->ALUOutput = current_Reg->ex_mem->ALUOutput;
 
 	if (current_core->current_state_Reg->ex_mem->IR->opcode >= 16 && current_core->current_state_Reg->ex_mem->IR->opcode <= 17) { // lw, sw
-		mem_access(current_core, cycleNumber, stallData);
+		mem_access(current_core, stallData);
 	}
 }
 
