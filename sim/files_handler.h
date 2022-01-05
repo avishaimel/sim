@@ -46,4 +46,4 @@ FILE* open_Dsrams(int coreNum, int argc, char** argv);
 void write_RegOut(Core *cores, FILE **regout);
 void write_Rams(FILE* tram, FILE* dram, struct cache* cache);
 void write_Statistics(Core* cores, FILE** stats);
-void colse_all_Files(FILE **trace, FILE **imem, FILE **regout, FILE** stats, FILE** tsrams, FILE** dsrams, FILE* memin_file, FILE* memout_file, FILE* bus_trace);
+void close_all_files(FILE **trace, FILE **imem, FILE **regout, FILE** stats, FILE** tsrams, FILE** dsrams, FILE* memin_file, FILE* memout_file, FILE* bus_trace);

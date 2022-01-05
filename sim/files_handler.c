@@ -101,8 +101,10 @@ void write_RegOut(Core *cores, FILE **regout) {
 }
 
 void write_Rams(FILE* tram, FILE* dram, struct cache* cache) {
-	for (int j = 0; j < NUM_OF_BLOCK; j++) {
-		fprintf(dram, "%08X\n", cache->dsram[j]);
+	for (int j = 0; j < NUM_OF_BLOCKS; j++) {
+		for (int i = 0; i < BLOCK_SIZE; ++i) {
+			fprintf(dram, "%08X\n", cache->dsram[j][i]);
+		}
 		fprintf(tram, "%05X", cache->tsram[j]->mesi_state);
 		fprintf(tram, "%03X\n", cache->tsram[j]->tag);
 	}
@@ -121,7 +123,7 @@ void write_Statistics(Core* cores, FILE** stats) {
 	}
 }
 
-void colse_all_Files(FILE **trace, FILE **imem, FILE **regout, FILE** stats, FILE** tsrams, FILE** dsrams, FILE* memin_file, FILE* memout_file, FILE* bus_trace) {
+void close_all_files(FILE **trace, FILE **imem, FILE **regout, FILE** stats, FILE** tsrams, FILE** dsrams, FILE* memin_file, FILE* memout_file, FILE* bus_trace) {
 	for (int i = 0; i < CORE_NUM; i++) {
 		fclose(trace[i]);
 		fclose(imem[i]);

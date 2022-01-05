@@ -18,7 +18,7 @@ bool isBranchOpcode(int opcode)
 }
 
 
-void branchResolution(Core *core) {
+void branchResolution(Core* core) {
 	bool isJump = false;
 	bool isLink = false;
 	int left_condition_reg_val;
@@ -82,7 +82,7 @@ void loadRegsForExecute(Core* core) {
 		core->new_state_Reg->id_ex->B = core->current_state_Reg->privateRegisters[core->current_state_Reg->if_id->IR->rt];
 }
 
-bool check_if_Data_Hazard(Instruction *Inst_to_check, Instruction *Rd_inst) {
+bool check_if_Data_Hazard(Instruction* Inst_to_check, Instruction* Rd_inst) {
 	if (Rd_inst->rd == 0 || Rd_inst->rd == 1 ||
 		(Rd_inst->opcode >= 9 && Rd_inst->opcode <= 15) || Rd_inst->opcode == 17) // branch instructions or sw -> Rd doesn't change - no hazard
 		return false;
@@ -90,7 +90,7 @@ bool check_if_Data_Hazard(Instruction *Inst_to_check, Instruction *Rd_inst) {
 		if (Inst_to_check->rs == Rd_inst->rd || Inst_to_check->rt == Rd_inst->rd)
 			return true;
 	if ((Inst_to_check->opcode >= 9 && Inst_to_check->opcode <= 15) || Inst_to_check->opcode == 17) /*
-																	for branches and sw to validate that rd was written before the instruction*/ 
+																	for branches and sw to validate that rd was written before the instruction*/
 		if (Inst_to_check->rd == Rd_inst->rd)
 			return true;
 	return false;
@@ -144,44 +144,40 @@ int runALU(int opcode, int A, int B) {
 
 
 // Public functions:
-void mem_access(Core* core, int cycleNumber, StallData* stall_data) {
+void mem_access(Core* core, StallData* stall_data) {
 	// return if opcode is not lw/sw
 	int opcode = core->current_state_Reg->ex_mem->IR->opcode;
 	if (opcode != 16 && opcode != 17) {
 		return;
 	}
-	bool tag_conflict = false;
-	if (opcode == 16) {
-		int mesi_state = get_mesi_state(core->Cache, core->current_state_Reg->ex_mem->ALUOutput, &tag_conflict);
-		if (mesi_state == INVALID || tag_conflict) {
-			core->Cache->read_miss++;
-			
-		}
-	}
+	if (opcode == 16)
+		cache_access(core, core->Cache, stall_data, 1);
+	else
+		cache_access(core, core->Cache, stall_data, 2);
 }
 
-void handle_load_store(Core* core, int cycleNumber, StallData* stallData)
-{
-	int result_LL;
-	bool isStall = false;
-	core->new_state_Reg->mem_wb->LMD = request(core->Cache,
-		core->current_state_Reg->ex_mem->IR->opcode,
-		core->current_state_Reg->ex_mem->ALUOutput, core->current_state_Reg->privateRegisters[core->current_state_Reg->ex_mem->IR->rd],
-		core->coreID, cycleNumber,
-		&isStall, &result_LL);
-	if (core->current_state_Reg->ex_mem->IR->opcode == 19) //sc
-	{
-		core->new_state_Reg->mem_wb->ALUOutput = result_LL;
-	}
-	if (isStall) {
-		stallData[MEMORY].active = true;
-		core->new_state_Reg->mem_wb->isStall = true;
-	}
-	else {
-		stallData[MEMORY].active = false;
-		core->new_state_Reg->mem_wb->isStall = false;
-	}
-}
+//void handle_load_store(Core* core, int cycleNumber, StallData* stallData)
+//{
+//	int result_LL;
+//	bool isStall = false;
+//	core->new_state_Reg->mem_wb->LMD = request(core->Cache,
+//		core->current_state_Reg->ex_mem->IR->opcode,
+//		core->current_state_Reg->ex_mem->ALUOutput, core->current_state_Reg->privateRegisters[core->current_state_Reg->ex_mem->IR->rd],
+//		core->coreID, cycleNumber,
+//		&isStall, &result_LL);
+//	if (core->current_state_Reg->ex_mem->IR->opcode == 19) //sc
+//	{
+//		core->new_state_Reg->mem_wb->ALUOutput = result_LL;
+//	}
+//	if (isStall) {
+//		stallData[MEMORY].active = true;
+//		core->new_state_Reg->mem_wb->isStall = true;
+//	}
+//	else {
+//		stallData[MEMORY].active = false;
+//		core->new_state_Reg->mem_wb->isStall = false;
+//	}
+//}
 
 
 
@@ -274,7 +270,7 @@ void EX(CoreRegisters* current_Reg, Core* current_core, StallData* stallData) {
 	current_core->state.executeExecuted = true;
 	if ((current_Reg->id_ex->IR->opcode >= 0 && current_Reg->id_ex->IR->opcode <= 8) || (current_Reg->id_ex->IR->opcode >= 16 && current_Reg->id_ex->IR->opcode <= 17)) { /*arithmetic instructions*/
 		current_core->new_state_Reg->ex_mem->ALUOutput = runALU(current_Reg->id_ex->IR->opcode,
-																	current_Reg->id_ex->A, current_Reg->id_ex->B);
+			current_Reg->id_ex->A, current_Reg->id_ex->B);
 	}
 }
 
@@ -293,7 +289,7 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 	if (stallData[MEMORY].active) {  // stall in memory 
 		current_core->new_state_Reg->mem_wb->isStall = true;
 		current_core->state.memoryExecuted = true;
-		handle_load_store(current_core, cycleNumber, stallData);
+		mem_access(current_core, cycleNumber, stallData);
 		return;
 	}
 
@@ -320,7 +316,7 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 	current_core->new_state_Reg->mem_wb->ALUOutput = current_Reg->ex_mem->ALUOutput;
 
 	if (current_core->current_state_Reg->ex_mem->IR->opcode >= 16 && current_core->current_state_Reg->ex_mem->IR->opcode <= 17) { // lw, sw
-		handle_load_store(current_core, cycleNumber, stallData);
+		mem_access(current_core, cycleNumber, stallData);
 	}
 }
 

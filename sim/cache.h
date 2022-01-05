@@ -38,10 +38,10 @@ typedef struct cache {
 int translate_address(int address);
 int translate_tag(int address);
 int translate_index(int address);
-char* translate_mesi_transaction(int opcode);
+int translate_offset(int address);
 int get_mesi_state_old(Cache* cache, int index, int tag, bool* tagConflict);
 int get_mesi_state(Cache* cache, int address, bool* tagConflict);
-int mesi_state_machine(char* type_transaction, int mesi_current_state);
 Cache* cache_initiation(int coreID);
-void cache_read(Core* core, Cache* cache, int address);
+void cache_access(void* core_ptr, Cache* cache, void* stall_data_ptr, int trans);
+void snoop(Cache* cache, int core_id);
 void free_cache(Cache* cache);
