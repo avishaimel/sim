@@ -1,8 +1,6 @@
 #include "files_handler.h"
 #include "pipeline.h"
 #include "bus.h"
-#include "bridge.h"
-#include "sim.h"
 #include "memory.h"
 
 #pragma warning(disable:4996)
@@ -29,7 +27,6 @@ int main(int argc, char* argv[])
 	char commands[MAXIMUM_CHARS_IN_LINE];
 	int cycleNumber = -1;
 	int* main_memory;
-	bus* main_bus;
 	Cache* caches[4];
 	if (argc > 1 && argc != NUM_OF_ARGUMENTS)
 	{
@@ -41,19 +38,12 @@ int main(int argc, char* argv[])
 	bus_trace = open_BusTrace(argc, argv);
 	main_memory = memory_initiation();
 	set_memin_array(meminf, main_memory);
-	main_bus = bus_initiation(main_memory);
+	bus_initiation(main_memory, bus_trace);
 
 
-	for (int i = 0; i < CORE_NUM; i++){
+	for (int i = 0; i < CORE_NUM; i++) {
 		caches[i] = cache_initiation(i);
 	}
-	main_bridge = (Bridge *)malloc(sizeof(Bridge));
-	if (main_bridge == NULL)
-	{
-		printf("Couldn't allocate space for the bridge");
-		return 1;
-	}
-	bridge_initiation(bus_trace, caches[0], caches[1], caches[2], caches[3], main_bus);
 	Core* cores_array = cores_initiation(caches);
 	for (int i = 0; i < CORE_NUM; i++)
 	{
@@ -76,24 +66,25 @@ int main(int argc, char* argv[])
 	write_Statistics(cores_array, stats); /* writing the statistics to the stats files */
 
 
-	// code for loading the modified data in the cache to check if our assembly code is valid
+	// write modified data from caches to main memory
 	/*for (int i = 0; i < NUM_OF_CORES; i++) {
-		for (int j = 0; j < 256; j++) {
-			if (main_bridge->caches[i]->tsram[j]->msi_state == 2) {
-				int address = (main_bridge->caches[i]->tsram[j]->tag << 8) + j;
-				main_bridge->main_bus->main_memory[address] = main_bridge->caches[i]->dsram[j];
+		for (int j = 0; j < NUM_OF_BLOCKS; j++) {
+			if (cores_array[i].Cache->tsram[j]->mesi_state == MODIFIED) {
+				int address = (cores_array[i].Cache->tsram[j]->tag << 8) + BLOCK_SIZE * j;
+				for (int k = 0; k < BLOCK_SIZE; ++k) {
+					main_bus->main_memory[address + k] = cores_array[i].Cache->dsram[j][k];
+				}
 			}
 		}
-
 	}*/
 
 	write_Memout(memoutf, main_memory); /* writing the memory data to the memout file */
 
-	colse_all_Files(core_trace, imem, regout, stats, tsram, dsram, meminf, memoutf, bus_trace);/* closes the files for writing */
+	close_all_files(core_trace, imem, regout, stats, tsram, dsram, meminf, memoutf, bus_trace);/* closes the files for writing */
 	/*free the allocated objects*/
 	free_Cores(cores_array);
 	free_bus(main_bus);
-	free_bridge(main_bridge);
+	// free_bridge(main_bridge);
 	return 0;
 }
 
@@ -117,9 +108,9 @@ void Load_inst_into_Core(char commands[10], FILE* imem, Core* current_core)
  * @param cores - all the cores objects
  * @return bool variable - will tell the program whether to finish all the cores cycles or not
  */
-bool stopProgram(Core *cores) {
+bool stopProgram(Core* cores) {
 	bool result = true;
-	for (int i = 0; i < CORE_NUM; i++) {
+	for (int i = 0; i < CORE_NUM && result; i++) {
 		result = result && (cores[i].state.haltProgram);
 	}
 	return result;
@@ -142,6 +133,10 @@ void cyclesSimulation(Core* cores_array, int numOfCycle, FILE** trace)
 			write_Core_Trace(trace[i], &(cores_array[i]), numOfCycle);
 			update_core_registers(&(cores_array[i]));
 			cores_array[i].state.PC = cores_array[i].current_state_Reg->if_id->New_PC;
+		}
+		run_bus(numOfCycle);
+		for (int i = 0; i < CORE_NUM; ++i) {
+			snoop(cores_array[i].Cache, i);
 		}
 	}
 }
