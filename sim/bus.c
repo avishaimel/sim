@@ -38,6 +38,7 @@ void flush_cycle() {
 void initiate_transaction(transaction* req, int origid) {
 	if (origid == MAIN_MEMORY) { // flush from main memory - incur delay
 		main_bus->delay_cycles = 15;
+		main_bus->bus_cmd = NO_COMMAND;
 	}
 	else {
 		main_bus->bus_cmd = req->cmd;
@@ -109,6 +110,7 @@ void run_bus(int cycle) {
 	if ((main_bus->bus_cmd == NO_COMMAND && main_bus->delay_cycles == 0) ||
 		(main_bus->bus_cmd == FLUSH && main_bus->flush_offset == 0)) {
 		// bus is free, give it to next core in line
+		main_bus->bus_cmd = NO_COMMAND;
 		dequeue();
 	}
 	else {
@@ -123,7 +125,8 @@ void run_bus(int cycle) {
 		}
 		else { // bus_cmd == BusRd || BusRdX
 			if (main_bus->fast_pass != NULL) {
-				if (main_bus->queue[main_bus->fast_pass_core_id]->first->flush_source_addr == main_bus->fast_pass->flush_source_addr) {
+				if (main_bus->queue[main_bus->fast_pass_core_id]->first != NULL &&
+					main_bus->queue[main_bus->fast_pass_core_id]->first->flush_source_addr == main_bus->fast_pass->flush_source_addr) {
 					dequeue_from_core(main_bus->fast_pass_core_id);
 				}
 				initiate_transaction(main_bus->fast_pass, main_bus->fast_pass_core_id);
