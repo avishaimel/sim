@@ -83,6 +83,7 @@ void bus_initiation(int* main_memory, FILE* trace) {
 		exit(1); /*exiting the program after an error occured */
 	}
 	main_bus->main_memory = main_memory;
+	main_bus->last_served = NUM_OF_CORES - 1; // so that core0 will be first at RR when program begins
 	main_bus->trace = trace;
 	for (int i = 0; i < NUM_OF_CORES; ++i) {
 		main_bus->queue[i] = (transaction_queue*)malloc(sizeof(transaction_queue));
