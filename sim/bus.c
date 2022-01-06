@@ -45,7 +45,7 @@ void initiate_transaction(transaction* req, int origid) {
 	}
 	main_bus->bus_origid = origid;
 	main_bus->bus_addr = req->addr;
-	main_bus->bus_shared = 0;
+	if (req->cmd != FLUSH) main_bus->bus_shared = 0; // only reset bus_shared on busrd/x
 	main_bus->flush_source_addr = req->flush_source_addr;
 	main_bus->flush_offset = 0;
 	if (req->cmd == FLUSH && origid != MAIN_MEMORY) {
@@ -127,7 +127,8 @@ void run_bus(int cycle) {
 			if (main_bus->fast_pass != NULL) {
 				if (main_bus->queue[main_bus->fast_pass_core_id]->first != NULL &&
 					main_bus->queue[main_bus->fast_pass_core_id]->first->flush_source_addr == main_bus->fast_pass->flush_source_addr) {
-					dequeue_from_core(main_bus->fast_pass_core_id);
+					transaction* trans = dequeue_from_core(main_bus->fast_pass_core_id);
+					free(trans);
 				}
 				initiate_transaction(main_bus->fast_pass, main_bus->fast_pass_core_id);
 				main_bus->fast_pass = NULL;

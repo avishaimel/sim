@@ -169,6 +169,7 @@ void snoop(Cache* cache, int core_id) {
 				flush->flush_source_addr = cache->dsram[translate_index(main_bus->bus_addr)];
 				flush->next = NULL;
 				main_bus->fast_pass = flush;
+				main_bus->fast_pass_core_id = core_id;
 			}
 			if (cmd == BUSRD) main_bus->bus_shared = 1;
 			cache->tsram[translate_index(main_bus->bus_addr)]->mesi_state = cmd == BUSRD ? SHARED : INVALID;

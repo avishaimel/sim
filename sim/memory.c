@@ -23,9 +23,6 @@ void set_memin_array(FILE* memin, int* main_memory) {
 	int i = 0;
 	while (true) {  //place input file lines into array
 		fgets(bufferPointer, WORD, memin);
-		if (i == 1024) {
-			int h = 0;
-		}
 		main_memory[i] = (int)strtoll(bufferPointer, NULL, 16);
 		if (feof(memin)) {
 			break;
