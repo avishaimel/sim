@@ -116,12 +116,12 @@ void run_bus(int cycle) {
 	}
 	else {
 		if (main_bus->delay_cycles > 0) {
-			if (--main_bus->delay_cycles == 0) {
+			if (--main_bus->delay_cycles == 0) { // bus waits to start Flush
 				main_bus->bus_cmd = FLUSH;
 				flush_cycle();
 			}
 		}
-		else if (main_bus->bus_cmd == FLUSH) {
+		else if (main_bus->bus_cmd == FLUSH) { // bus is occupied because of Flush
 			flush_cycle();
 		}
 		else { // bus_cmd == BusRd || BusRdX
