@@ -118,7 +118,7 @@ typedef struct Core {
 
 
 // Functions:
-
+//Documentation in core.c
 Core* cores_initiation(Cache** cache_array);
 void free_Cores(Core* cores);
 void write_Core_Trace(FILE* trace, Core* core, int cycleNumber);

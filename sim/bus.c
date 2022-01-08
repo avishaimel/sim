@@ -5,10 +5,24 @@
 
 // Private Functions:
 
+/**
+ * Function that writes to the bustrace.txt
+ * @param trace: file to write to
+ * @param cycle: current cycle
+ * @param bus_origid: bus device
+ * @param bus_cmd: bus command
+ * @param bus_addr: bus address
+ * @param bus_data: bus data
+ */
 void print_to_trace(FILE* trace, int cycle, int bus_origid, int bus_cmd, int bus_addr, int bus_data, int bus_shared) {
 	if (bus_cmd) fprintf(trace, TRACE_FORMAT, cycle, bus_origid, bus_cmd, bus_addr, bus_data, bus_shared);
 }
 
+/**
+ * Function that finds the number of the next core in the priority for the bus access
+ * The function makes sure the core that most recently got the bus will be last in the priority (robin-round)
+ * @return int - the number of the next core in the priority for the bus access
+ */
 int round_robin_arbiter() {
 	int next = (main_bus->last_served + 1) % NUM_OF_CORES;
 	while (next != main_bus->last_served) {
@@ -45,7 +59,7 @@ void initiate_transaction(transaction* req, int origid) {
 	}
 	main_bus->bus_origid = origid;
 	main_bus->bus_addr = req->addr;
-	main_bus->bus_shared = 0;
+	if (req->cmd != FLUSH) main_bus->bus_shared = 0; // only reset bus_shared on busrd/x
 	main_bus->flush_source_addr = req->flush_source_addr;
 	main_bus->flush_offset = 0;
 	if (req->cmd == FLUSH && origid != MAIN_MEMORY) {
@@ -75,7 +89,11 @@ void dequeue() {
 }
 
 // Public functions:
-
+/**
+ * Function that initializes the bus and to allocates the space needed to store it
+ * @param main_memory: the main memory array
+ * @param file handler trace: the bus trace file
+ */
 void bus_initiation(int* main_memory, FILE* trace) {
 	main_bus = (struct bus*)calloc(1, sizeof(struct bus));
 	if (main_bus == NULL) {
@@ -83,6 +101,7 @@ void bus_initiation(int* main_memory, FILE* trace) {
 		exit(1); /*exiting the program after an error occured */
 	}
 	main_bus->main_memory = main_memory;
+	main_bus->last_served = NUM_OF_CORES - 1; // so that core0 will be first at RR when program begins
 	main_bus->trace = trace;
 	for (int i = 0; i < NUM_OF_CORES; ++i) {
 		main_bus->queue[i] = (transaction_queue*)malloc(sizeof(transaction_queue));
@@ -94,7 +113,11 @@ void bus_initiation(int* main_memory, FILE* trace) {
 		main_bus->queue[i]->last = NULL;
 	}
 }
-
+/**
+ * Function that enters a request of a bus transaction in the bus queue
+ * @param core_index: the number of the core that sent the request
+ * @param transaction* req: the type of the bus transaction needed
+ */
 void enqueue(int core_index, transaction* req) {
 	if (main_bus->queue[core_index]->first == NULL) {
 		main_bus->queue[core_index]->first = req;
@@ -106,6 +129,8 @@ void enqueue(int core_index, transaction* req) {
 	}
 }
 
+/**
+ */
 void run_bus(int cycle) {
 	if ((main_bus->bus_cmd == NO_COMMAND && main_bus->delay_cycles == 0) ||
 		(main_bus->bus_cmd == FLUSH && main_bus->flush_offset == 0)) {
@@ -115,19 +140,20 @@ void run_bus(int cycle) {
 	}
 	else {
 		if (main_bus->delay_cycles > 0) {
-			if (--main_bus->delay_cycles == 0) {
+			if (--main_bus->delay_cycles == 0) {// bus waits to start Flush
 				main_bus->bus_cmd = FLUSH;
 				flush_cycle();
 			}
 		}
-		else if (main_bus->bus_cmd == FLUSH) {
+		else if (main_bus->bus_cmd == FLUSH) { // bus is occupied because of Flush
 			flush_cycle();
 		}
 		else { // bus_cmd == BusRd || BusRdX
 			if (main_bus->fast_pass != NULL) {
 				if (main_bus->queue[main_bus->fast_pass_core_id]->first != NULL &&
 					main_bus->queue[main_bus->fast_pass_core_id]->first->flush_source_addr == main_bus->fast_pass->flush_source_addr) {
-					dequeue_from_core(main_bus->fast_pass_core_id);
+					transaction* trans = dequeue_from_core(main_bus->fast_pass_core_id);
+					free(trans);
 				}
 				initiate_transaction(main_bus->fast_pass, main_bus->fast_pass_core_id);
 				main_bus->fast_pass = NULL;
@@ -145,6 +171,9 @@ void run_bus(int cycle) {
 	print_to_trace(main_bus->trace, cycle, main_bus->bus_origid, main_bus->bus_cmd, main_bus->bus_addr, main_bus->bus_data, main_bus->bus_shared);
 }
 
+/**
+ * Function that frees the bus and the space allocated for it
+ */
 void free_bus() {
 	free_memory(main_bus->main_memory);
 	free(main_bus);

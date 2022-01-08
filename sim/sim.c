@@ -8,7 +8,7 @@
 #define NUM_OF_ARGUMENTS 28
 #define MAXIMUM_CHARS_IN_LINE 10
 
-/*declaration of functions*/
+/*Functions Declarations*/
 void cyclesSimulation(Core* core, int cycleNumber, FILE** trace);
 void Load_inst_into_Core(char commands[10], FILE* imem, Core* core);
 
@@ -57,13 +57,13 @@ int main(int argc, char* argv[])
 	}
 	cyclesSimulation(cores_array, cycleNumber, core_trace);
 
-	write_RegOut(cores_array, regout); /* writing the data to the registers file */
+	write_RegOut(cores_array, regout); /* write the data to the regout files */
 
-	for (int i = 0; i < CORE_NUM; i++) { /* writing the data to the rams files - tsram and dsram */
+	for (int i = 0; i < CORE_NUM; i++) { /* write the data to the tsram and dsram files */
 		write_Rams(tsram[i], dsram[i], cores_array[i].Cache);
 	}
 
-	write_Statistics(cores_array, stats); /* writing the statistics to the stats files */
+	write_Statistics(cores_array, stats); /* write the data to the stats files */
 
 
 	// write modified data from caches to main memory
@@ -78,16 +78,21 @@ int main(int argc, char* argv[])
 		}
 	}*/
 
-	write_Memout(memoutf, main_memory); /* writing the memory data to the memout file */
+	write_Memout(memoutf, main_memory); /* write the data to the memout file */
 
-	close_all_files(core_trace, imem, regout, stats, tsram, dsram, meminf, memoutf, bus_trace);/* closes the files for writing */
+	close_all_files(core_trace, imem, regout, stats, tsram, dsram, meminf, memoutf, bus_trace);/* close the files we wrote to */
 	/*free the allocated objects*/
 	free_Cores(cores_array);
 	free_bus(main_bus);
-	// free_bridge(main_bridge);
 	return 0;
 }
 
+/**
+ * Function that loads the instructions from the imem file to the core
+ * @param commands - array that will contain the lines from imem
+ * @param imem - file pointer to the relevant imem file
+ * @param current_core - the core that the instructions will be loaded to
+ */
 void Load_inst_into_Core(char commands[10], FILE* imem, Core* current_core)
 {
 	int i = 0;
@@ -104,9 +109,9 @@ void Load_inst_into_Core(char commands[10], FILE* imem, Core* current_core)
 }
 
 /**
- * The function is responsible for returning flag that will tell us whether to stop the program from running or not
- * @param cores - all the cores objects
- * @return bool variable - will tell the program whether to finish all the cores cycles or not
+ * Function that returns a flag that indicates whether to stop the program or not
+ * @param cores - array of all cores
+ * @return bool variable result - indicates whether all the cores are at a halt or not
  */
 bool stopProgram(Core* cores) {
 	bool result = true;
@@ -116,6 +121,12 @@ bool stopProgram(Core* cores) {
 	return result;
 }
 
+/**
+ * Function that executes the pipeline cycles
+ * @param cores_array - array of all cores
+ * @param numOfCycle - the number of cycle to start from
+ * @param trace - the trace files of the cores
+ */
 void cyclesSimulation(Core* cores_array, int numOfCycle, FILE** trace)
 {
 	while (!stopProgram(cores_array))

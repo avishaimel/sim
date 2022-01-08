@@ -17,6 +17,7 @@ typedef enum mesi_state {
 	MODIFIED
 }mesi_state;
 
+/* Tsram structure:*/
 typedef struct Tsram {
 	int tag;
 	int mesi_state;
@@ -34,12 +35,11 @@ typedef struct cache {
 	int mem_stall;
 }Cache;
 
-
+//Documentation in cache.c
 int translate_address(int address);
 int translate_tag(int address);
 int translate_index(int address);
 int translate_offset(int address);
-int get_mesi_state_old(Cache* cache, int index, int tag, bool* tagConflict);
 int get_mesi_state(Cache* cache, int address, bool* tagConflict);
 Cache* cache_initiation(int coreID);
 void cache_access(void* core_ptr, Cache* cache, void* stall_data_ptr, int trans);

@@ -17,12 +17,8 @@ typedef enum PipelineStages {
 	WRITE_BACK
 } PipelineStages;
 
-
-
-
-
 //Functions:
-
+//documentation in pipeline.c
 void Fetch(CoreRegisters* current_Reg, Core* current_core, StallData* stall);	
 void Decode(CoreRegisters* currentRegisters, Core* current_core, StallData* stallData);
 void EX(CoreRegisters* current_Reg, Core* current_core, StallData* stallData);

@@ -6,18 +6,39 @@
 
 //Private functions:
 
+/**
+ * Function that extends the sign of the immediate in each instruction
+ * @param immediate: the immediate value of the instruction to sign extend
+ * @return int sign extended immediate
+ */
 int sign_extention(int immediate) {
 	immediate <<= SIGN_EXTEND_NUM;
 	immediate >>= SIGN_EXTEND_NUM;
 	return immediate;
 }
 
+/**
+ * Functions that checks whether an opcode is a branch opcode or not
+ * @param opcode: opcode
+ * @return bool
+*/
 bool isBranchOpcode(int opcode)
 {
 	return opcode >= 9 && opcode <= 15;
 }
 
-
+/**
+ * Function that executes branch resolution - 
+ * The functions calculates the result of each part of the branch condition and compares them
+ * according to the current operation.
+ * Then, the function updates the New_PC (the PC of the next operation):
+ * - if the jump is taken it will be the immediate of the instruction. 
+ * - if not the New_PC will be PC + 1.
+ * If the jump is taken the delaySlotPC is also updated and the state is changed to be delaySlot, since the old PC
+ * that is currently in fetch stage is wrong
+ * if the instruction is a jal instruction, PC + 1 is stored in R15 for return
+ * @param core: pointer to a Core object
+ */
 void branchResolution(Core* core) {
 	bool isJump = false;
 	bool isLink = false;
@@ -70,6 +91,10 @@ void branchResolution(Core* core) {
 		core->new_state_Reg->if_id->New_PC = core->state.PC + 1;
 }
 
+/**
+* The Function performs signe extension on the immediate and loads data from the relevant registers to A and B in the ALU. 
+ * @param core: pointer to a Core object
+*/
 void loadRegsForExecute(Core* core) {
 	core->current_state_Reg->if_id->IR->imm = sign_extention(core->current_state_Reg->if_id->IR->imm);
 	if (core->current_state_Reg->if_id->IR->rs == 1)/*gets the value of immediate*/
@@ -82,6 +107,14 @@ void loadRegsForExecute(Core* core) {
 		core->new_state_Reg->id_ex->B = core->current_state_Reg->privateRegisters[core->current_state_Reg->if_id->IR->rt];
 }
 
+/**
+ * Function that indicates whether there are data hazards between 2 instructions.
+ * The function checks all cases where a register is used before it is written to with WB
+ * Rd_inst is checked only only if it's an instruciton that updates Rd
+ * @param Inst_to_check: the instruction we want to run - need to check that it doesn't use Rd from instRd
+ * @param Rd_inst: instruction that updates Rd
+ * @return bool -  whether there are data hazards between 2 instructions.
+*/
 bool check_if_Data_Hazard(Instruction* Inst_to_check, Instruction* Rd_inst) {
 	if (Rd_inst->rd == 0 || Rd_inst->rd == 1 ||
 		(Rd_inst->opcode >= 9 && Rd_inst->opcode <= 15) || Rd_inst->opcode == 17) // branch instructions or sw -> Rd doesn't change - no hazard
@@ -96,7 +129,13 @@ bool check_if_Data_Hazard(Instruction* Inst_to_check, Instruction* Rd_inst) {
 	return false;
 }
 
-
+/**
+ * Function that finds data hazards in the pipeline and returns stall data. Checks for data hazard
+ * between the different stages of pipeline to check if decode / execute is stalled or runs
+ * @param stage: the stage in which to update the stallData (only EXECUTE in our pipeline)
+ * @param core: pointer to a Core object
+ * @return StallData struct data - contaning updated stall status in the stage
+*/
 StallData findDataHazards(PipelineStages stage, Core* core) {
 	StallData data;
 	data.active = false;
@@ -115,6 +154,13 @@ StallData findDataHazards(PipelineStages stage, Core* core) {
 	return data;
 }
 
+/**
+ * Function that runs the ALU and returns the updated ALUOUT according to the opcode
+ * @param opcode: the ALU operation to perform
+ * @param A: first input
+ * @param B: second input
+ * @return ALU output
+*/
 int runALU(int opcode, int A, int B) {
 	switch (opcode) {
 	case 0://ADD
@@ -144,6 +190,11 @@ int runALU(int opcode, int A, int B) {
 
 
 // Public functions:
+/**
+ * Function that calls the cache access function for LW and ST instructions. For other instructions the function doesn't do anything
+ * @param core: pointer to a Core object
+ * @param StallData struct stall_data 
+*/
 void mem_access(Core* core, StallData* stall_data) {
 	// return if opcode is not lw/sw
 	int opcode = core->current_state_Reg->ex_mem->IR->opcode;
@@ -156,35 +207,16 @@ void mem_access(Core* core, StallData* stall_data) {
 		cache_access(core, core->Cache, stall_data, 2);
 }
 
-//void handle_load_store(Core* core, int cycleNumber, StallData* stallData)
-//{
-//	int result_LL;
-//	bool isStall = false;
-//	core->new_state_Reg->mem_wb->LMD = request(core->Cache,
-//		core->current_state_Reg->ex_mem->IR->opcode,
-//		core->current_state_Reg->ex_mem->ALUOutput, core->current_state_Reg->privateRegisters[core->current_state_Reg->ex_mem->IR->rd],
-//		core->coreID, cycleNumber,
-//		&isStall, &result_LL);
-//	if (core->current_state_Reg->ex_mem->IR->opcode == 19) //sc
-//	{
-//		core->new_state_Reg->mem_wb->ALUOutput = result_LL;
-//	}
-//	if (isStall) {
-//		stallData[MEMORY].active = true;
-//		core->new_state_Reg->mem_wb->isStall = true;
-//	}
-//	else {
-//		stallData[MEMORY].active = false;
-//		core->new_state_Reg->mem_wb->isStall = false;
-//	}
-//}
-
-
-
+/**
+  * Function that executes the fetch stage in the pipeline
+  * @param currentReg: the relevant registers - Q regs
+  * @param current_core: pointer to a Core object
+  * @param stallData stall: the stall information from the previous cycle
+*/
 void Fetch(CoreRegisters* current_Reg, Core* current_core, StallData* stall) {
-	if (!current_core->state.doFetch || current_core->state.PC == -1) { // reached end of program (halt in decode -> PC = -1)
+	if (!current_core->state.doFetch || current_core->state.PC == -1) { // reached the end of the program for the core(halt in decode -> PC = -1)
 		current_core->new_state_Reg->if_id->PC = current_core->state.PC;
-		current_core->state.fetchExecuted = false;/*for the trace printing*/
+		current_core->state.fetchExecuted = false;/*for printing in the trace*/
 		return;
 	}
 	if (stall[EXECUTE].active || stall[MEMORY].active) {
@@ -196,11 +228,16 @@ void Fetch(CoreRegisters* current_Reg, Core* current_core, StallData* stall) {
 	current_core->state.fetchExecuted = true;
 	if (current_core->new_state_Reg->if_id->New_PC != -1) {
 		current_core->state.doDecode = true;
-		current_core->coreStatistics.instructions++; // number of instructions executed
+		current_core->coreStatistics.instructions++; // number of the executed instructions
 	}
 }
 
-
+/**
+  * Function that executes the decode stage in the pipeline, performs branch resolution and loads registers for ALU
+  * @param currentReg: the relevant registers - Q regs
+  * @param current_core: pointer to a Core object
+  * @param stallData stall: the stall information from the previous cycle
+*/
 void Decode(CoreRegisters* currentRegisters, Core* current_core, StallData* stallData) {
 	if (!current_core->state.doDecode) {
 		current_core->state.decodeExecuted = false;
@@ -228,6 +265,12 @@ void Decode(CoreRegisters* currentRegisters, Core* current_core, StallData* stal
 	branchResolution(current_core);
 }
 
+/**
+  * Function that executes the execute stage in the pipeline, checks for data hazards and configures stalls accordingly
+  * @param currentReg: the relevant registers - Q regs
+  * @param current_core: pointer to a Core object
+  * @param stallData stall: the stall information from the previous cycle
+*/
 void EX(CoreRegisters* current_Reg, Core* current_core, StallData* stallData) {
 	if (!current_core->state.doExecute) {
 		current_core->state.executeExecuted = false;
@@ -274,13 +317,20 @@ void EX(CoreRegisters* current_Reg, Core* current_core, StallData* stallData) {
 	}
 }
 
+/**
+  * Function that executes the memory stage in the pipeline, uses function mem_access to access cache and memory operations
+  * @param currentReg: the relevant registers - Q regs
+  * @param current_core: pointer to a Core object
+  * @param stallData stall: the stall information from the previous cycle
+  * @param int cycleNumber: the number of the cycles the core was running
+*/
 void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, int cycleNumber) {
 	bool isStall = false;
 	if (!current_core->state.doMemory) {
 		current_core->state.memoryExecuted = false;
 		return;
 	}
-	if (current_Reg->ex_mem->isStall) { // stalling from execute - move bubble down the pipeline
+	if (current_Reg->ex_mem->isStall) { // stalling from execute - move stall down the pipeline
 		current_core->state.memoryExecuted = false;
 		current_core->new_state_Reg->mem_wb->isStall = true;
 		return;
@@ -301,7 +351,7 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 		return;
 	}
 
-	if (current_Reg->ex_mem->IR->opcode == 20) { // reached halt
+	if (current_Reg->ex_mem->IR->opcode == 20) { // halt reached
 		current_core->state.doWriteBack = true;
 		current_core->state.memoryExecuted = true;
 		current_core->state.doMemory = false;
@@ -320,17 +370,23 @@ void MEM(CoreRegisters* current_Reg, Core* current_core, StallData* stallData, i
 	}
 }
 
-
+/**
+  * Function that executes the write-back stage in the pipeline
+  * @param currentReg: the relevant registers - Q regs
+  * @param current_core: pointer to a Core object
+  * @param stallData stall: the stall information from the previous cycle
+  * @param int cycleNumber: the number of the cycles the core was running
+*/
 void WriteBack(CoreRegisters* currentRegisters, Core* core, StallData* stallData, int cycleNumber) {
 	if (currentRegisters->mem_wb->isStall) { // stall
 		core->state.writeBackExecuted = false;
 		return;
 	}
-	if (!core->state.doWriteBack) // before first WB
+	if (!core->state.doWriteBack) //haven't reached the first WB yet
 		return;
-	if (currentRegisters->mem_wb->IR->opcode == 20) { // reached halt- stop program WB ended
+	if (currentRegisters->mem_wb->IR->opcode == 20) { // the core reached halt - stop program WB ended
 		core->state.haltProgram = true;
-		core->coreStatistics.cycles = cycleNumber + 1;// actual number of clock cycles the core was running till halt
+		core->coreStatistics.cycles = cycleNumber + 1;// number of clock cycles the core was running untill halt
 		core->state.writeBackExecuted = true;
 		core->state.doWriteBack = false;
 		return;
@@ -343,10 +399,14 @@ void WriteBack(CoreRegisters* currentRegisters, Core* core, StallData* stallData
 	else if (core->new_state_Reg->mem_wb->IR->opcode == 17 || (core->new_state_Reg->mem_wb->IR->opcode >= 9 && core->new_state_Reg->mem_wb->IR->opcode <= 15)) {
 		return;
 	}
-	if (currentRegisters->mem_wb->IR->rd != 0 && currentRegisters->mem_wb->IR->rd != 1)/*for not changing the ZERO and IMM registers*/
+	if (currentRegisters->mem_wb->IR->rd != 0 && currentRegisters->mem_wb->IR->rd != 1)/*shouldn't change the ZERO and IMM registers*/
 		core->new_state_Reg->privateRegisters[currentRegisters->mem_wb->IR->rd] = currentRegisters->mem_wb->ALUOutput;
 }
 
+/**
+  * Function that moves all the data from D registers to Q registers between cycles
+  * @param current_core: pointer to a Core object containing the Q and D registers
+*/
 void update_core_registers(Core* core) {
 	memcpy(core->current_state_Reg->if_id, core->new_state_Reg->if_id, sizeof(IF_ID));
 	memcpy(core->current_state_Reg->id_ex, core->new_state_Reg->id_ex, sizeof(ID_EX));
