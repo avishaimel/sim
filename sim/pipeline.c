@@ -156,30 +156,6 @@ void mem_access(Core* core, StallData* stall_data) {
 		cache_access(core, core->Cache, stall_data, 2);
 }
 
-//void handle_load_store(Core* core, int cycleNumber, StallData* stallData)
-//{
-//	int result_LL;
-//	bool isStall = false;
-//	core->new_state_Reg->mem_wb->LMD = request(core->Cache,
-//		core->current_state_Reg->ex_mem->IR->opcode,
-//		core->current_state_Reg->ex_mem->ALUOutput, core->current_state_Reg->privateRegisters[core->current_state_Reg->ex_mem->IR->rd],
-//		core->coreID, cycleNumber,
-//		&isStall, &result_LL);
-//	if (core->current_state_Reg->ex_mem->IR->opcode == 19) //sc
-//	{
-//		core->new_state_Reg->mem_wb->ALUOutput = result_LL;
-//	}
-//	if (isStall) {
-//		stallData[MEMORY].active = true;
-//		core->new_state_Reg->mem_wb->isStall = true;
-//	}
-//	else {
-//		stallData[MEMORY].active = false;
-//		core->new_state_Reg->mem_wb->isStall = false;
-//	}
-//}
-
-
 
 void Fetch(CoreRegisters* current_Reg, Core* current_core, StallData* stall) {
 	if (!current_core->state.doFetch || current_core->state.PC == -1) { // reached end of program (halt in decode -> PC = -1)

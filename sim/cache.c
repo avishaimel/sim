@@ -68,19 +68,6 @@ int translate_offset(int address) {
 	return address & OFFSET_MASK;
 }
 
-int get_mesi_state_old(Cache* cache, int index, int tag, bool* tagConflict) {
-	if (cache->tsram[index]->mesi_state == INVALID) {
-		return INVALID;
-	}
-
-	if (cache->tsram[index]->tag == tag) {
-		return cache->tsram[index]->mesi_state;
-	}
-
-	*tagConflict = true;
-
-	return INVALID;
-}
 
 int get_mesi_state(Cache* cache, int address, bool* tag_conflict) {
 	int block = translate_index(address);
@@ -108,7 +95,7 @@ void cache_access(void* core_ptr, Cache* cache, void* stall_data_ptr, int trans)
 		// first attempt to access the data - stall pipeline and wait for memory
 		stall_data[MEMORY].active = true;
 		core->new_state_Reg->mem_wb->isStall = true;
-		if (trans == BUSRD) cache->read_miss++;
+		if (trans == BUSRD) cache->read_miss++; // lw inst -> read miss
 		else cache->write_miss++;
 		if (tag_conflict && mesi_state == MODIFIED) { // write modified value to memory before overwriting
 			transaction* flush = (transaction*)malloc(sizeof(transaction));
@@ -151,6 +138,7 @@ void cache_access(void* core_ptr, Cache* cache, void* stall_data_ptr, int trans)
 	}
 }
 
+//After runBus(), updates each core's cache according to current bus transaction
 void snoop(Cache* cache, int core_id) {
 	bool tag_conflict = false;
 	int cmd = main_bus->bus_cmd;
@@ -158,7 +146,7 @@ void snoop(Cache* cache, int core_id) {
 		if (core_id == main_bus->bus_origid) return;
 		int mesi_state = get_mesi_state(cache, main_bus->bus_addr, &tag_conflict);
 		if (!tag_conflict && mesi_state != INVALID) {
-			if (mesi_state == MODIFIED) {
+			if (mesi_state == MODIFIED) { // another core is in Modified- Flush
 				transaction* flush = (transaction*)malloc(sizeof(transaction));
 				if (flush == NULL) {
 					printf("An error occurred while allocating memory for bus transaction");
@@ -169,9 +157,10 @@ void snoop(Cache* cache, int core_id) {
 				flush->flush_source_addr = cache->dsram[translate_index(main_bus->bus_addr)];
 				flush->next = NULL;
 				main_bus->fast_pass = flush;
+				main_bus->fast_pass_core_id = core_id;
 			}
-			if (cmd == BUSRD) main_bus->bus_shared = 1;
-			cache->tsram[translate_index(main_bus->bus_addr)]->mesi_state = cmd == BUSRD ? SHARED : INVALID;
+			if (cmd == BUSRD) main_bus->bus_shared = 1; // BusRd -> change to Shared
+			cache->tsram[translate_index(main_bus->bus_addr)]->mesi_state = cmd == BUSRD ? SHARED : INVALID; // update Mesi state (snoop)
 		}
 	}
 	else if (cmd == FLUSH) {

@@ -45,7 +45,6 @@ typedef struct transaction_queue {
 
 typedef struct bus {
 	int* main_memory;
-	int** memory_state;  
 	int bus_origid;
 	int bus_cmd;
 	int bus_addr;
