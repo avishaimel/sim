@@ -18,7 +18,7 @@ void initiate_cote_stats(Core* core) {
 
 /**
  * Function that initializes the core parameters
- * @param core - the core to be initialized
+ * @param current_core - the core to be initialized
  */
 void Core_status_initiation(Core* current_core) {
 	current_core->state.doFetch = true;
