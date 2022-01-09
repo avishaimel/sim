@@ -20,7 +20,7 @@ void print_to_trace(FILE* trace, int cycle, int bus_origid, int bus_cmd, int bus
 
 /**
  * Function that finds the number of the next core in the priority for the bus access
- * The function makes sure the core that most recently got the bus will be last in the priority (robin-round)
+ * The function makes sure the core that most recently got the bus will be last in the priority (round-robin)
  * @return int - the number of the next core in the priority for the bus access
  */
 int round_robin_arbiter() {
@@ -38,6 +38,10 @@ int round_robin_arbiter() {
 	return -1;
 }
 
+/**
+* Performs a single flush cycle
+* Writes next word in the block to bus_data and updates bus_addr and flush_offset
+*/
 void flush_cycle() {
 	main_bus->bus_data = main_bus->flush_source_addr[main_bus->flush_offset];
 	if (main_bus->flush_offset == 0) main_bus->bus_addr = main_bus->bus_addr & ~OFFSET_MASK;
@@ -49,6 +53,11 @@ void flush_cycle() {
 	main_bus->flush_offset = (main_bus->flush_offset + 1) % BLOCK_SIZE;
 }
 
+/**
+* Starts a new bus transaction and initializes bus lines
+* @param req: the request to create the transaction from
+* @param origid: the tranasction originator
+*/
 void initiate_transaction(transaction* req, int origid) {
 	if (origid == MAIN_MEMORY) { // flush from main memory - incur delay
 		main_bus->delay_cycles = 15;
@@ -68,6 +77,11 @@ void initiate_transaction(transaction* req, int origid) {
 	free(req);
 }
 
+/**
+* Removes a request from the queue of a given core. Assumes queue is not empty.
+* @param core_id: the core to dequeue a request from
+* @return transaction: the dequeued request
+*/
 transaction* dequeue_from_core(int core_id) {
 	transaction* temp = main_bus->queue[core_id]->first;
 	main_bus->queue[core_id]->first = temp->next;
@@ -78,6 +92,9 @@ transaction* dequeue_from_core(int core_id) {
 	return temp;
 }
 
+/**
+* Finds the next transaction to be handled according to round robin and initializes it on the bus
+*/
 void dequeue() {
 	// Round Robin policy
 	int next_core = round_robin_arbiter();
@@ -130,7 +147,11 @@ void enqueue(int core_index, transaction* req) {
 }
 
 /**
- */
+* Main bus simulation function.
+* At every iteration, checks if the bus is free and starts a new transaction, 
+* or handles the current transaction
+* @param cycle: current clock cycle, required for printing the trace
+*/
 void run_bus(int cycle) {
 	if ((main_bus->bus_cmd == NO_COMMAND && main_bus->delay_cycles == 0) ||
 		(main_bus->bus_cmd == FLUSH && main_bus->flush_offset == 0)) {
