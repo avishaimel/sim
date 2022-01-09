@@ -17,6 +17,7 @@ typedef enum mesi_state {
 	MODIFIED
 }mesi_state;
 
+/* Tsram structure:*/
 typedef struct Tsram {
 	int tag;
 	int mesi_state;
@@ -34,7 +35,7 @@ typedef struct cache {
 	int mem_stall;
 }Cache;
 
-
+//Documentation in cache.c
 int translate_address(int address);
 int translate_tag(int address);
 int translate_index(int address);

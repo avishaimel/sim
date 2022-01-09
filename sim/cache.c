@@ -11,7 +11,10 @@
 #pragma warning(disable:4996)
 
 //Private Functions:
-
+/**
+ * Function that initializes tsram and allocates the space needed to store it
+ * @return Tsram** struct initialized tsram
+ */
 Tsram** initialize_tsram() {
 	struct Tsram** tsram = (struct Tsram**)malloc(sizeof(struct Tsram*) * NUM_OF_BLOCKS);
 	if (tsram == NULL) {
@@ -31,6 +34,11 @@ Tsram** initialize_tsram() {
 	return tsram;
 }
 
+/**
+ * Function that initializes the cache and allocates the space needed to store it
+ * @param coreID: the ID of core that wants to initialize cache
+ * @return Cache struct - initialized cache
+ */
 Cache* cache_initiation(int coreID) {
 	struct cache* cache = (struct cache*)malloc(sizeof(struct cache));
 	if (cache == NULL) {
@@ -51,24 +59,46 @@ Cache* cache_initiation(int coreID) {
 	cache->write_miss = 0;
 	return cache;
 }
-
+/**
+ * Function that translates the address according to the space of main memory (20 bits)
+ * @param address: address to translate
+ * @return int - the right address
+ */
 int translate_address(int address) {
 	return address & LEFT_MOST_20;
 }
-
+/**
+ * Function that extracts the current tag
+ * @param address: address from which to extract tag
+ * @return int - current tag
+ */
 int translate_tag(int address) {
 	return (address & TAG_MASK) >> 8;
 }
-
+/**
+ * Function to extract current index
+ * @param address: address from which to extract index
+ * @return int - current index
+ */
 int translate_index(int address) {
 	return (address & BLOCK_MASK) >> 2;
 }
-
+/**
+ * Function to extract current offset
+ * @param address: address from which to extract offset
+ * @return int - current offset
+ */
 int translate_offset(int address) {
 	return address & OFFSET_MASK;
 }
 
-
+/**
+ * Function to get the mesi state
+ * @param cache: current cache
+ * @param address - the address to check the mesi state of
+ * @param tagConflict: boolean to check if tag conflict is present
+ * @return int current mesi state
+ */
 int get_mesi_state(Cache* cache, int address, bool* tag_conflict) {
 	int block = translate_index(address);
 	if (cache->tsram[block]->tag != translate_tag(address)) {
@@ -77,6 +107,16 @@ int get_mesi_state(Cache* cache, int address, bool* tag_conflict) {
 	return cache->tsram[block]->mesi_state;
 }
 
+/**
+ * Function that manages the access to the cache
+ * if there is cache hit the functions updates the LMD (READ) or the dsram (WRITE) with the correct data
+ * if there is cache miss the function uses the enqueue function to put the request in the bus access queue
+ * The function also updates the mesi state accordingly
+ * @param core_ptr - pointer to the current core
+ * @param cache: current cache
+ * @param stall_data_pointer - pointer to the stall data to use
+ * @param int trans: the needed bus transaction
+ */
 void cache_access(void* core_ptr, Cache* cache, void* stall_data_ptr, int trans) {
 	bool tag_conflict = false;
 	Core* core = (Core*)core_ptr;
@@ -138,7 +178,12 @@ void cache_access(void* core_ptr, Cache* cache, void* stall_data_ptr, int trans)
 	}
 }
 
-//After runBus(), updates each core's cache according to current bus transaction
+/**
+ * Function that implements the snoop protocol to ensure cache coherency 
+ * After runBus(), the function updates each core's cache according to current bus transaction
+ * @param cache: current cache
+ * @param int core_id: the current core number
+ */
 void snoop(Cache* cache, int core_id) {
 	bool tag_conflict = false;
 	int cmd = main_bus->bus_cmd;
@@ -178,6 +223,10 @@ void snoop(Cache* cache, int core_id) {
 	}
 }
 
+/**
+ * Function that frees the cache and the space allocated for it
+ * @param cache: cache to be freed
+ */
 void free_cache(Cache* cache) {
 	for (int i = 0; i < NUM_OF_BLOCKS; i++) {
 		free(cache->tsram[i]);

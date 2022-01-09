@@ -33,7 +33,7 @@
 
 
 // Public functions:
-
+//Documnetation in files_handler.c
 FILE* open_Memin(int argc, char** argv);
 FILE* open_MemOut(int argc, char** argv);
 FILE* open_BusTrace(int argc, char** argv);

@@ -6,16 +6,20 @@
 
 #include "core.h"
 
-
+/**
+ * Function that initializes the core statistics
+ * @param core - the current core
+ */
 void initiate_cote_stats(Core* core) {
 	core->coreStatistics.cycles = 0;
 	core->coreStatistics.decode_stall = 0;
 	core->coreStatistics.instructions = 0;
 }
 
-
-/*Initiation of given core parameters
-input - Core type pointer to be initiate*/
+/**
+ * Function that initializes the core parameters
+ * @param current_core - the core to be initialized
+ */
 void Core_status_initiation(Core* current_core) {
 	current_core->state.doFetch = true;
 	current_core->state.doDecode = current_core->state.doExecute = current_core->state.doMemory = current_core->state.doWriteBack = false;
@@ -31,10 +35,10 @@ void Core_status_initiation(Core* current_core) {
 	}
 }
 
-
-
-/* Initializing the Core registers, both private and pipeline
-Returnes - initialized CoreRegister object*/
+/**
+ * Function that initializes the core private and pipeline registers
+ * @return CoreRegisters object with the initialized registers
+ */
 CoreRegisters* Core_Registers_Initiation() {
 	CoreRegisters* registers = NULL;
 	IF_ID* if_id = NULL;
@@ -45,10 +49,10 @@ CoreRegisters* Core_Registers_Initiation() {
 	registers = (CoreRegisters *)calloc(1, sizeof(CoreRegisters));
 	if (registers == NULL) {
 		printf("Un error occurred while allocating memory for the core registers");
-		exit(1); /*exiting the program after an error occured */
+		exit(1); /*an error occured - exiting */
 	}
 
-	// init pipeline registers
+	// initialize pipeline registers
 	if_id = calloc(1, sizeof(IF_ID));
 	id_ex = calloc(1, sizeof(ID_EX));
 	ex_mem = calloc(1, sizeof(EX_MEM));
@@ -65,6 +69,11 @@ CoreRegisters* Core_Registers_Initiation() {
 	return registers;
 }
 
+/**
+ * Function that initializes the cores parameters such as registers, statistics etc.
+ * @param cache_array - the caches of of each core
+ * @return Core* object - the initialized cores
+ */
 Core* cores_initiation(Cache** cache_array) {
 	Core* cores = NULL;
 	cores = (Core *)malloc(sizeof(Core) * CORE_NUM);
@@ -89,34 +98,10 @@ Core* cores_initiation(Cache** cache_array) {
 	return cores;
 }
 
-
-
-/* Initializing all Core parameters
-input - Cache type array, holds the given Core cache
-output - creates Core array that holds all cores initiate values and returns it*/
-Core* Core_parameters_initiation(Cache** cache_array) {
-	Core* cores_array = NULL;
-	cores_array = (Core *)malloc(sizeof(Core) * CORE_NUM);
-	if (cores_array == NULL) {
-		printf("Allocation memory error occured, exit program");
-		exit(1); /*exiting the program after an error occured */
-	}
-
-	for (int i = 0; i < CORE_NUM; i++) {
-		// Init core and core registers
-		cores_array[i].coreID = i;
-		cores_array[i].new_state_Reg = Core_Registers_Initiation();
-		cores_array[i].current_state_Reg = Core_Registers_Initiation();
-		cores_array[i].Cache = cache_array[i];
-		Core_status_initiation(&(cores_array[i]));
-		initiate_cote_stats(&(cores_array[i]));
-		cores_array[i].new_state_Reg->if_id->New_PC = 1;
-		memset(cores_array[i].instructions, 0, NUMBER_OF_INSTRUCTIONS * sizeof(Instruction));
-	}
-
-	return cores_array;
-}
-
+/**
+ * Function that frees all the core registers
+ * @param registers - the current private and pipeling registers of the core
+ */
 void freeCoreRegisters(CoreRegisters* registers)
 {
 	free(registers->if_id);
@@ -125,6 +110,10 @@ void freeCoreRegisters(CoreRegisters* registers)
 	free(registers->mem_wb);
 }
 
+/**
+ * Function that frees all the cores objects
+ * @param core - the cores objects
+ */
 void free_Cores(Core* cores)
 {
 	for (int i = 0; i < CORE_NUM; i++) {
@@ -137,6 +126,12 @@ void free_Cores(Core* cores)
 	free(cores);
 }
 
+/**
+ * Function that writes the current cycle of the execution to the core trace
+ * @param file handler trace - the relevant core trace file to write to
+ * @param Core core - the current core 
+ * @param int cycleNumber - the current cycle number
+ */
 void write_Core_Trace(FILE* trace, Core* core, int cycleNumber) {
 	if (!core->state.fetchExecuted)
 		fprintf(trace, "%d %s ", cycleNumber, "---");/*write --- if the fetch stage is in stall */

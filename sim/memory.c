@@ -3,7 +3,10 @@
 
 #define MEM_SIGN_EXTEND_NUM 32
 
-
+/**
+ * Function that initializes the main memory allocates the space needed to store it
+ * @return int* memory_initiation - Initialized main memory
+ */
 int* memory_initiation() {
 	int* memory_array = NULL;
 	memory_array = (int *)malloc(sizeof(int) * MAX_WORDS);
@@ -17,6 +20,11 @@ int* memory_initiation() {
 	return memory_array;
 }
 
+/**
+ * Function that copies the memin.txt contents to the main memory array
+ * @param memin: file of memory
+ * @param main_memory: array of main memory
+ */
 void set_memin_array(FILE* memin, int* main_memory) {
 	char buffer[WORD];
 	char *bufferPointer = buffer;
@@ -35,6 +43,11 @@ void set_memin_array(FILE* memin, int* main_memory) {
 	}
 }
 
+/**
+ * Function that returns the index of the last word that is not zero in memory to print in the best way
+ * @param main_memory: array of main memory
+ * @return index of last non-zero element
+ */
 int index_for_memout(int* main_memory) {
 	int i = MAX_WORDS - 1;
 	for (; i > 0; i--) {
@@ -45,6 +58,11 @@ int index_for_memout(int* main_memory) {
 	return i;
 }
 
+/**
+ * Function that copies the content of the main memory to memout.txt
+ * @param memout: file of memory out
+ * @param main_memory: array of main memory
+ */
 void write_Memout(FILE *memout, int* main_memory) {
 	int max_index = index_for_memout(main_memory);
 	for (int j = 0; j < max_index + 1; j++) {
@@ -52,6 +70,10 @@ void write_Memout(FILE *memout, int* main_memory) {
 	}
 }
 
+/**
+ * Function that frees the main memory and the space allocated for it
+ * @param main_memory
+ */
 void free_memory(int* main_memory) {
 	free(main_memory);
 }

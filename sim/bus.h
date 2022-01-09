@@ -31,6 +31,7 @@ typedef enum bus_device {
 	MAIN_MEMORY
 }bus_device;
 
+/* Transaction structure:*/
 typedef struct transaction {
 	int cmd;
 	int addr;
@@ -38,11 +39,13 @@ typedef struct transaction {
 	struct transaction* next;
 }transaction;
 
+/*Transaction queue struct*/
 typedef struct transaction_queue {
 	transaction* first;
 	transaction* last;
 }transaction_queue;
 
+/* Bus structure:*/
 typedef struct bus {
 	int* main_memory;
 	int bus_origid;
@@ -63,6 +66,7 @@ typedef struct bus {
 bus* main_bus;
 
 //Functions:
+//Documentation in bus.c
 void bus_initiation(int* main_memory, FILE* trace);
 void enqueue(int core_index, transaction* req);
 void run_bus(int cycle);
